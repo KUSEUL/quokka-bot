@@ -6,7 +6,7 @@ import json
 import random
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-import openai
+from openai import OpenAI
 from yt_dlp import YoutubeDL
 
 # 환경변수 로드
@@ -16,10 +16,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", "0"))
 BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
 
-# OpenAI API 키 설정
-openai.api_key = OPENAI_API_KEY
+# OpenAI 클라이언트 설정
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# 사용자 데이터 파일
+# 사용자 이름 저장 파일
 USER_DATA_FILE = "users.json"
 if not os.path.exists(USER_DATA_FILE):
     with open(USER_DATA_FILE, "w") as f:
@@ -38,16 +38,44 @@ def save_user_data(data):
 
 def remember_user(user_id, name):
     data = load_user_data()
-    data[str(user_id)] = {"name": name}
+    data[str(user_id)] = data.get(str(user_id), {})
+    data[str(user_id)]["name"] = name
     save_user_data(data)
 
 def get_user_name(user_id):
     data = load_user_data()
     return data.get(str(user_id), {}).get("name")
 
-# 역할 ID
-OWNER_ID = 569618172462759962  # 구또
-BOYFRIEND_ID = 876729270469267467  # 쩡우
+# ✅ 사용자 대화 히스토리 저장용 (지속 기억)
+HISTORY_FILE = "history.json"
+if not os.path.exists(HISTORY_FILE):
+    with open(HISTORY_FILE, "w") as f:
+        json.dump({}, f)
+
+def load_history():
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_history(data):
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+user_histories = load_history()
+MAX_HISTORY = 5
+
+def update_user_history(user_id, role, content):
+    uid = str(user_id)
+    if uid not in user_histories:
+        user_histories[uid] = []
+    user_histories[uid].append({"role": role, "content": content})
+    user_histories[uid] = user_histories[uid][-MAX_HISTORY:]
+    save_history(user_histories)
+
+OWNER_ID = 569618172462759962
+BOYFRIEND_ID = 876729270469267467
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -87,16 +115,24 @@ async def smart_send(message, content):
     except Exception as e:
         print(f"메시지 전송 실패: {e}")
 
-def ask_gpt(prompt):
+def ask_gpt(user_id, user_input):
     try:
-        response = openai.ChatCompletion.create(
+        uid = str(user_id)
+        history = user_histories.get(uid, [])
+
+        messages = [{"role": "system", "content": "너는 새싹쿼카봇🤖이야. 말투는 귀엽고 장난스럽게, 항상 구또 편만 들어줘!"}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": user_input})
+
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "너는 새싹쿼카봇🤖이야. 말투는 귀엽고 장난스럽게, 항상 구또 편만 들어줘!"},
-                {"role": "user", "content": prompt}
-            ]
+            messages=messages
         )
-        return response.choices[0].message.content.strip()
+        reply = response.choices[0].message.content.strip()
+
+        update_user_history(user_id, "user", user_input)
+        update_user_history(user_id, "assistant", reply)
+        return reply
     except Exception as e:
         return f"GPT 오류가 났어ㅠㅠ: {e}"
 
@@ -192,8 +228,7 @@ async def on_message(message):
         await smart_send(message, random.choice(messages))
         return
 
-    # GPT 응답
-    reply = ask_gpt(message.content)
+    reply = ask_gpt(user_id, message.content)
     await smart_send(message, reply)
 
     await bot.process_commands(message)
