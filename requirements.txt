@@ -2,3 +2,4 @@ discord.py
 flask
 openai
 python-dotenv
+yt_dlp
