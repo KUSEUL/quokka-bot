@@ -2,68 +2,34 @@ import discord
 from discord.ext import commands
 import asyncio
 import os
-import json
 import random
 from dotenv import load_dotenv
 from keep_alive import keep_alive
 from openai import OpenAI
 from yt_dlp import YoutubeDL
 
-# 환경변수 로드
+# 🌱 환경변수 로드
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", "0"))
 BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
 
-# OpenAI 클라이언트 설정
+# 🌱 OpenAI 클라이언트
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# 사용자 이름 저장 파일
-USER_DATA_FILE = "users.json"
-if not os.path.exists(USER_DATA_FILE):
-    with open(USER_DATA_FILE, "w") as f:
-        json.dump({}, f)
+# 🌱 유저 ID
+OWNER_ID = 569618172462759962  # 구또
+BOYFRIEND_ID = 876729270469267467  # 정우
 
-def load_user_data():
-    try:
-        with open(USER_DATA_FILE, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
-        return {}
+# 🌱 이름 저장
+user_names = {
+    str(OWNER_ID): "구또",
+    str(BOYFRIEND_ID): "정우"
+}
 
-def save_user_data(data):
-    with open(USER_DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-def remember_user(user_id, name):
-    data = load_user_data()
-    data[str(user_id)] = data.get(str(user_id), {})
-    data[str(user_id)]["name"] = name
-    save_user_data(data)
-
-def get_user_name(user_id):
-    data = load_user_data()
-    return data.get(str(user_id), {}).get("name")
-
-# ✅ 사용자 대화 히스토리 저장용 (지속 기억)
-HISTORY_FILE = "history.json"
-if not os.path.exists(HISTORY_FILE):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump({}, f)
-
-def load_history():
-    try:
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {}
-
-def save_history(data):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-user_histories = load_history()
+# 🌱 히스토리 저장
+user_histories = {}
 MAX_HISTORY = 5
 
 def update_user_history(user_id, role, content):
@@ -72,20 +38,60 @@ def update_user_history(user_id, role, content):
         user_histories[uid] = []
     user_histories[uid].append({"role": role, "content": content})
     user_histories[uid] = user_histories[uid][-MAX_HISTORY:]
-    save_history(user_histories)
 
-OWNER_ID = 569618172462759962
-BOYFRIEND_ID = 876729270469267467
+def ask_gpt(user_id, user_input):
+    try:
+        uid = str(user_id)
+        history = user_histories.get(uid, [])
 
+        messages = [{
+            "role": "system",
+            "content": (
+                "너는 디스코드용 챗봇 '새싹쿼카봇🤖'이야. 성격은 귀엽고 장난기 많아.\n"
+                "'구또'(569618172462759962)는 너의 공주님이자 주인이야. 항상 구또 편만 들고 애교 섞인 말투로 응답해.\n"
+                "'정우'(876729270469267467)는 구또의 남자친구인데, 가끔 질투하고 구박하는 말투로 대해야 해.\n"
+                "말투는 '~쪄용', '~했따앙', '힝구ㅠㅠ', '헤헷콩' 같은 귀엽고 장난스러운 말투를 섞어서 자연스럽게 사용하고, 이모지도 자주 써줘."
+            )
+        }]
+        messages.extend(history)
+        messages.append({"role": "user", "content": user_input})
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages
+        )
+        reply = response.choices[0].message.content.strip()
+        update_user_history(user_id, "user", user_input)
+        update_user_history(user_id, "assistant", reply)
+        return reply or "힝구ㅠㅠ 대답이 안 나왔어용!"
+    except Exception as e:
+        return f"GPT 오류가 났어용ㅠㅠ: {e}"
+
+# 🌱 이미지 생성 함수 (DALL·E 사용)
+async def generate_image(prompt):
+    try:
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            n=1
+        )
+        return response.data[0].url
+    except Exception as e:
+        print(f"이미지 생성 실패: {e}")
+        return None
+
+# 🌱 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
+intents.guilds = True
 bot = commands.Bot(command_prefix="", intents=intents)
 
 music_queue = []
-current_vc = None
 
 def search_youtube(query):
-    with YoutubeDL({'format': 'bestaudio', 'noplaylist': 'True', 'quiet': True}) as ydl:
+    options = {'format': 'bestaudio', 'noplaylist': 'True', 'quiet': True}
+    with YoutubeDL(options) as ydl:
         try:
             info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
             return info['url'], info['title']
@@ -96,11 +102,11 @@ def search_youtube(query):
 async def play_music(vc):
     global music_queue
     if not music_queue:
-        await vc.disconnect()
+        if vc:
+            await vc.disconnect()
         return
-
     url, title = music_queue.pop(0)
-    with YoutubeDL({'format': 'bestaudio'}) as ydl:
+    with YoutubeDL({'format': 'bestaudio', 'quiet': True}) as ydl:
         info = ydl.extract_info(url, download=False)
         url2 = info['url']
         source = await discord.FFmpegOpusAudio.from_probe(url2, options='-vn')
@@ -115,27 +121,6 @@ async def smart_send(message, content):
     except Exception as e:
         print(f"메시지 전송 실패: {e}")
 
-def ask_gpt(user_id, user_input):
-    try:
-        uid = str(user_id)
-        history = user_histories.get(uid, [])
-
-        messages = [{"role": "system", "content": "너는 새싹쿼카봇🤖이야. 말투는 귀엽고 장난스럽게, 항상 구또 편만 들어줘!"}]
-        messages.extend(history)
-        messages.append({"role": "user", "content": user_input})
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
-        reply = response.choices[0].message.content.strip()
-
-        update_user_history(user_id, "user", user_input)
-        update_user_history(user_id, "assistant", reply)
-        return reply
-    except Exception as e:
-        return f"GPT 오류가 났어ㅠㅠ: {e}"
-
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} 로그인 완료! 🎉")
@@ -145,19 +130,20 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
+    await bot.process_commands(message)
     if message.author == bot.user:
         return
 
     msg = message.content.lower().strip()
     user_id = message.author.id
-    user_name = get_user_name(user_id)
 
     if msg.startswith("난 "):
-        new_name = msg.replace("난 ", "").strip()
-        remember_user(user_id, new_name)
-        await smart_send(message, f"알게쏘! {new_name}! 기억할게용~ 😊")
+        name = msg.replace("난 ", "").strip()
+        user_names[str(user_id)] = name
+        await smart_send(message, f"알게쏘! {name} 기억할게용~ 🐾")
         return
 
+    # 음성채널 입장
     if ("들어와" in msg and message.author.voice):
         try:
             channel = message.author.voice.channel
@@ -176,7 +162,7 @@ async def on_message(message):
             await message.guild.voice_client.disconnect()
             await smart_send(message, "쿼카 퇴장했어용~👋")
         else:
-            await smart_send(message, "지금은 음성 채널에 없쪄용~😗")
+            await smart_send(message, "지금 음성 채널에 없쪄용~😗")
         return
 
     if "노래 틀어" in msg or "음악 틀어" in msg:
@@ -199,25 +185,45 @@ async def on_message(message):
             await smart_send(message, "먼저 음성 채널에 들어가쏘~!")
         return
 
-    if "멈춰" in msg and message.guild.voice_client and message.guild.voice_client.is_playing():
-        message.guild.voice_client.pause()
-        await smart_send(message, "멈췄어용~⏸️")
+    if "멈춰" in msg:
+        vc = message.guild.voice_client
+        if vc and vc.is_playing():
+            vc.pause()
+            await smart_send(message, "멈췄어용~⏸️")
         return
 
-    if "다시 틀어" in msg and message.guild.voice_client and message.guild.voice_client.is_paused():
-        message.guild.voice_client.resume()
-        await smart_send(message, "다시 고고!!~▶️")
+    if "다시 틀어" in msg:
+        vc = message.guild.voice_client
+        if vc and vc.is_paused():
+            vc.resume()
+            await smart_send(message, "다시 고고!!~▶️")
         return
 
     if "다음 노래" in msg or "스킵" in msg:
-        if message.guild.voice_client and message.guild.voice_client.is_playing():
-            message.guild.voice_client.stop()
+        vc = message.guild.voice_client
+        if vc and vc.is_playing():
+            vc.stop()
             await smart_send(message, "다음 곡으로 점프해쪄용~⏭️")
         else:
             await smart_send(message, "지금 재생 중인 곡이 없쪄용~😗")
         return
 
-    if "말해" in msg or "쿼카야 뭐해" in msg or "놀자" in msg:
+    # 🖼 이미지 생성 명령어
+    if "그려줘" in msg or "그림" in msg or "사진 만들어" in msg:
+        prompt = message.content.replace("그려줘", "").replace("그림", "").replace("사진 만들어", "").strip()
+        if not prompt:
+            await smart_send(message, "무슨 그림 그릴까용~? 🎨")
+            return
+        await smart_send(message, f"그림 만드는 중이쪄용~🖌️ '{prompt}'...")
+        image_url = await generate_image(prompt)
+        if image_url:
+            await message.channel.send(image_url)
+        else:
+            await smart_send(message, "이미지 생성 실패했어용ㅠㅠ")
+        return
+
+    # 자동반응
+    if any(kw in msg for kw in ["말해", "쿼카야 뭐해", "놀자"]):
         messages = [
             "공주 근데 왜케 이뻐용? 헤헷콩~🌸", "구또밖에 몰라용~ 힝구ㅠㅠ",
             "쩡우! 또 구또랑 말했쪄? 질투나쟈냐~🙄", "구또는 세상에서 쩰 귀여워요~💛",
@@ -228,10 +234,12 @@ async def on_message(message):
         await smart_send(message, random.choice(messages))
         return
 
+    # 🧠 GPT 응답
     reply = ask_gpt(user_id, message.content)
     await smart_send(message, reply)
 
-    await bot.process_commands(message)
-
+# 🌱 Replit 유지용
 keep_alive()
+
+# 🌱 실행
 bot.run(DISCORD_TOKEN)
