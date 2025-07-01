@@ -6,7 +6,7 @@ import json
 import random
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-from openai import OpenAI
+import openai
 from yt_dlp import YoutubeDL
 
 # 환경변수 로드
@@ -16,10 +16,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID", "0"))
 BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
 
-# OpenAI 클라이언트
-client = OpenAI(api_key=OPENAI_API_KEY)
+# OpenAI API 키 설정
+openai.api_key = OPENAI_API_KEY
 
-# 사용자 데이터
+# 사용자 데이터 파일
 USER_DATA_FILE = "users.json"
 if not os.path.exists(USER_DATA_FILE):
     with open(USER_DATA_FILE, "w") as f:
@@ -87,6 +87,19 @@ async def smart_send(message, content):
     except Exception as e:
         print(f"메시지 전송 실패: {e}")
 
+def ask_gpt(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "너는 새싹쿼카봇🤖이야. 말투는 귀엽고 장난스럽게, 항상 구또 편만 들어줘!"},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"GPT 오류가 났어ㅠㅠ: {e}"
+
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} 로그인 완료! 🎉")
@@ -112,7 +125,6 @@ async def on_message(message):
     if ("들어와" in msg and message.author.voice):
         try:
             channel = message.author.voice.channel
-            print(f"연결 시도 채널: {channel}")
             if not message.guild.voice_client:
                 await channel.connect()
                 await smart_send(message, "쿼카 입장했따앙~🐾")
@@ -121,6 +133,7 @@ async def on_message(message):
         except Exception as e:
             print("입장 오류:", e)
             await smart_send(message, "입장 실패했쪄용ㅠㅠ")
+        return
 
     if "나가" in msg or "꺼져" in msg:
         if message.guild.voice_client:
@@ -179,7 +192,9 @@ async def on_message(message):
         await smart_send(message, random.choice(messages))
         return
 
-    # 기본 대화 처리 생략 가능 (GPT 응답 처리 등)
+    # GPT 응답
+    reply = ask_gpt(message.content)
+    await smart_send(message, reply)
 
     await bot.process_commands(message)
 
