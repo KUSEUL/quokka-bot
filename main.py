@@ -13,7 +13,7 @@ from yt_dlp import YoutubeDL
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-CHANNEL_ID = int(os.getenv("CHANNEL_ID", "0"))
+CHANNEL_ID = int(os.getenv("CHANNEL_ID") or "0")
 BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
 
 # 🌱 OpenAI 클라이언트
