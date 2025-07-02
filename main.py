@@ -179,7 +179,8 @@ async def on_message(message):
     msg = message.content.lower().strip()
     user_id = message.author.id
 
-    if msg in ["말해", "쿼카야 말해", "말해봐"]:
+    # ✅ 이제 on_message 안에서 정상 작동
+    if "말해" in msg:
         if message.author.voice and message.author.voice.channel:
             channel = message.author.voice.channel
             try:
@@ -188,44 +189,44 @@ async def on_message(message):
                     vc = await channel.connect()
                 elif vc.channel != channel:
                     await vc.move_to(channel)
-            except Exception as e:
-                print(f"음성 채널 연결 실패: {e}")
-                await smart_send(message, "띠로링... 음성룸 연결 실패ㅠㅠ")
-                return
 
-            random_phrases = [
-                "구또또또또또또또또똗💛",
-                "쩡우 형아 왜 왔어~? 질투나쟈냐~ 힝구ㅠㅠ",
-                "곤쥬 근데 오늘 왜케 예뻐용 진짜?",
-                "새싹쿼카 두두등장~ 헤헷콩!",
-                "이삐야 밥 먹었쩌용?~ 맘마빱빠 냠냠💘",
-                "새싹 쿼카를 물리쳐랏!!!",
-                "걔 정수리 새싹 난 옆동네 쿼카 아니냐?",
-                "나 황정우 아니라고 했드아아아아아?"
-            ]
-            selected_phrase = random.choice(random_phrases)
+                random_phrases = [
+                    "구또또또또또또또또똗💛",
+                    "쩡우 형아 왜 왔어~? 질투나쟈냐~ 힝구ㅠㅠ",
+                    "곤쥬 근데 오늘 왜케 예뻐용 진짜?",
+                    "새싹쿼카 두두등장~ 헤헷콩!",
+                    "이삐야 밥 먹었쩌용?~ 맘마빱빠 냠냠💘",
+                    "새싹 쿼카를 물리쳐랏!!!",
+                    "걔 정수리 새싹 난 옆동네 쿼카 아니냐?",
+                    "나 황정우 아니라고 했드아아아아아?"
+                ]
+                selected_phrase = random.choice(random_phrases)
 
-            try:
+                print(f"🧪 TTS 문장: {selected_phrase}")
                 tts = gTTS(text=selected_phrase, lang='ko')
+                print("✅ gTTS 인스턴스 생성 성공")
                 tts.save("tts.mp3")
-            except Exception as e:
-                print(f"TTS 생성 실패: {e}")
-                await smart_send(message, "모라고 말해용?ㅠㅠ")
-                return
+                print("✅ TTS mp3 저장 성공")
 
-            try:
                 audio_source = discord.FFmpegPCMAudio("tts.mp3")
                 if not vc.is_playing():
                     vc.play(audio_source)
                     while vc.is_playing():
                         await asyncio.sleep(1)
-                    os.remove("tts.mp3")  # ✅ TTS 재생 후 파일 삭제
+                    os.remove("tts.mp3")
+
             except Exception as e:
-                print(f"음성 재생 실패: {e}")
-                await smart_send(message, "입이 안떨어져용ㅠㅠ")
+                print("❌ TTS 생성 중 예외 발생!")
+                import traceback
+                traceback.print_exc()
+                try:
+                    await smart_send(message, "모라고 말해용?ㅠㅠ")
+                except:
+                    print("❌ smart_send도 실패함")
+            return
         else:
             await smart_send(message, "먼저 음성룸 들어가쏘~🌱")
-        return
+            return
 
     # 음악 기능
     if "노래 틀어" in msg or "틀어" in msg:
