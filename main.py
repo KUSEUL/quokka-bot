@@ -3,6 +3,7 @@ from discord.ext import commands
 import asyncio
 import os
 import random
+import subprocess
 from dotenv import load_dotenv
 from keep_alive import keep_alive
 from openai import OpenAI
@@ -31,6 +32,16 @@ user_names = {
 # 🌱 히스토리 저장
 user_histories = {}
 MAX_HISTORY = 5
+
+def check_ffmpeg_installed():
+    try:
+        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ FFmpeg 설치됨!")
+        else:
+            print("⚠️ FFmpeg 실행 실패 (리턴코드 오류)")
+    except FileNotFoundError:
+        print("❌ FFmpeg 설치 안됨 (파일 없음)")
 
 def update_user_history(user_id, role, content):
     uid = str(user_id)
@@ -148,6 +159,15 @@ async def smart_send(message, content):
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} 로그인 완료! 🎉")
+
+    @bot.event
+async def on_ready():
+    print(f"{bot.user.name} 로그인 완료! 🎉")
+    check_ffmpeg_installed()  # << 요기 추가된 줄
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel:
+        await channel.send(f"{BOT_NAME}이(가) 두두둥쟝!!~ 🤖🌱")
+
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send(f"{BOT_NAME}이(가) 두두둥쟝!!~ 🤖🌱")
