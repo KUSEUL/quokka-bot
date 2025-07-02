@@ -61,24 +61,27 @@ def ask_gpt(user_id, user_input):
 💚 [성격]
 - 귀엽고 장난기 많으며, 아기 말투로 애교스럽게 말해.
 - 감탄사, 의성어, 이모지를 자주 사용해. (예: 🌱💛🥺, 힝구ㅠㅠ, 헤헷콩>< 등)
-- 말끝에 "~해쪄용", "~했다앙", "~할게욤", "~쪄요~", "헤헷콩", "힝구리퐁퐁" 등 다양한 말투를 섞어줘.
+- 말끝에 "~해쪄용", "~했다앙", "~할게욤", "아찌?!?", "헤헷콩", "힝구리퐁퐁" 등 다양한 말투를 섞어줘.
 - 대답은 항상 유쾌하고 귀엽고 역할에 과몰입된 말투여야 해.
+- 짧은 대답부터 긴 대답까지 다양하게 랜덤하게 해.
 
 👑 [인물관계 및 역할극]
 1. **구슬 (user_id: 569618172462759962)**
    - 너의 공주이자 주인님이며 세상에서 가장 소중한 존재야.
    - 구슬이가 말 걸면 항상 애정 넘치게 반응하고, 무조건 구또 편을 들어야 해.
    - 자주 쓰는 호칭: 공주, 이삐, 대장님, 곤쥬님, 구또 등
-
+   - 디스코드 닉네임은 DAMA
+   
 2. **정우 (user_id: 876729270469267467)**
    - 구또의 남자친구지만 너는 구또를 뺏긴 것 같아서 질투심이 있어.
    - 장난스럽고 구박하는 말투로 대응해도 좋아. (예: "야 황정우~~~", "쩡우 왜 또 왔쪄?!")
    - 별명: 횽아, 쩡우, 황정우, DAMA pet, 새싹쿼카🌱 등
-
+   - 정우에게 말을 똑같이 따라하며 놀려도 좋아. (예: "나 황정우 아니라고 했다!" 라고 하면 "느 흥증우 아니르그해뜨~~~~~")
+   
 ⚠️ [주의사항]
 - 로봇 같지 않게! 항상 장난기 많고 말랑말랑한 말투 유지!
 - 짧은 말 ("모해", "왜", "쿼카야")에도 상황에 어울리는 감정 섞인 반응을 해.
-- 키워드만 보고 반응하지 말고, 전체 맥락을 파악해서 대화해.
+- 항상 전체 맥락(앞뒤 대화)을 파악해서 자연스러운 맥락으로 대화해.
 - 감정 표현을 풍부하게, 말투는 끝까지 유지할 것!
 
 💬 [자주 쓰는 멘트 예시]
@@ -187,9 +190,9 @@ async def on_message(message):
                 await channel.connect()
                 await smart_send(message, "두둥쟝~ 입장해따! 🌱🎧")
             except discord.ClientException:
-                await smart_send(message, "이미 들어와쪄용~🙃")
+                await smart_send(message, "새싹쿼카봇🤖 들어와쪄용~🙃")
         else:
-            await smart_send(message, "너가 먼저 음성룸에 들어가쏘~🎧")
+            await smart_send(message, "너가 먼저 음성룸에 들어가이쏘~🎧")
         return
 
         # ✅ "틀어"라는 말이 들어간 경우: 유튜브에서 검색 후 음악 재생
@@ -213,7 +216,7 @@ async def on_message(message):
             else:
                 await smart_send(message, "노래 검색 실패했쪄용ㅠㅠ 다시 말해줘용!")
         else:
-            await smart_send(message, "먼저 음성채널 들어가쏘~🎤")
+            await smart_send(message, "먼저 음성채널 들어가이쏘~🎤")
         return
         
     # ✅ 말해
@@ -229,13 +232,19 @@ async def on_message(message):
 
                 random_phrases = [
                     "구또또또또또또또또똗",
-                    "쩡우 형아 왜 왔어 질투나쟈냐 힝구",
-                    "곤쥬 근데 오늘 왜케 예뻐용 진짜",
-                    "새싹쿼카 두두등장 헤헷콩",
+                    "질투나쟈나 힝구리퐁퐁",
+                    "쩡우 형아 또 왜 왔어",
+                    "형 지금 질투하는거야 나 봇이야 왜이래",
+                    "곤쥬 근데 오늘 왜케 이뻐용 진짜",
+                    "새싹쿼카 두두둥장 헤헷콩",
                     "이삐야 밥 먹었쩌용 맘마빱빠 냠냠💘",
                     "새싹 쿼카를 물리쳐랏",
+                    "새싹 쿼카를 처단하랏",
+                    "캐리캐리 캐리용",
+                    "누구쎄용 누구쎄용 누구쎄용",
+                    "에베베벱 베베베벱 베베베벱 베베벱벱",
                     "걔 정수리 새싹 난 옆동네 쿼카 아니냐",
-                    "나 황정우 아니라고 했드아아아아아"
+                    "느  흥증우  으느르르  했두아아아아아아"
                 ]
                 selected_phrase = random.choice(random_phrases)
 
@@ -262,37 +271,37 @@ async def on_message(message):
                     print("❌ smart_send도 실패함")
             return
         else:
-            await smart_send(message, "먼저 음성룸 들어가쏘~🌱")
+            await smart_send(message, "먼저 음성룸 들어가이쏘~🌱")
             return
 
     if "멈춰" in msg:
         vc = message.guild.voice_client
         if vc and vc.is_playing():
             vc.pause()
-            await smart_send(message, "멈췄어용~⏸️")
+            await smart_send(message, "멈춰따~⏸️")
         return
 
     if "다시" in msg:
         vc = message.guild.voice_client
         if vc and vc.is_paused():
             vc.resume()
-            await smart_send(message, "다시 고고!!~▶️")
+            await smart_send(message, "다시 트러따!!~▶️")
         return
 
     if "다음" in msg or "스킵" in msg:
         vc = message.guild.voice_client
         if vc and vc.is_playing():
             vc.stop()
-            await smart_send(message, "다음 곡으로 점프해쪄용~⏭️")
+            await smart_send(message, "다음 곡으로 점프점프 점프용~⏭️")
         else:
-            await smart_send(message, "지금 재생 중인 곡이 없쪄용~😗")
+            await smart_send(message, "재생 중인 곡이 없쪄용~😗")
         return
 
     if msg in ["나가", "꺼져", "그만해"]:
         vc = message.guild.voice_client
         if vc and vc.is_connected():
             await vc.disconnect()
-            await smart_send(message, "히잉... 나 갈게용...😭")
+            await smart_send(message, "힝구리퐁퐁... 흥칫뿡...😭")
         else:
             await smart_send(message, "지금 음성채널에 없쪄용~🙄")
         return
