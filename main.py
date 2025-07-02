@@ -179,8 +179,8 @@ async def on_message(message):
     msg = message.content.lower().strip()
     user_id = message.author.id
 
-    # ✅ "들어와" 명령어 처리
-    if "들어와" in msg:
+    # ✅ "들어" 명령어 처리
+    if "들어" in msg:
         if message.author.voice and message.author.voice.channel:
             channel = message.author.voice.channel
             try:
@@ -192,6 +192,30 @@ async def on_message(message):
             await smart_send(message, "너가 먼저 음성룸에 들어가쏘~🎧")
         return
 
+        # ✅ "틀어"라는 말이 들어간 경우: 유튜브에서 검색 후 음악 재생
+    if "틀어" in msg:
+        if message.author.voice and message.author.voice.channel:
+            query = msg.replace("틀어", "").strip()
+            if not query:
+                await smart_send(message, "무슨 노래 틀까용~? 🎵 제목도 말해쪄야쥬!")
+                return
+            url, title = search_youtube(query)
+            if url:
+                music_queue.append((url, title))
+                vc = message.guild.voice_client
+                if not vc or not vc.is_connected():
+                    vc = await message.author.voice.channel.connect()
+                elif vc.channel != message.author.voice.channel:
+                    await vc.move_to(message.author.voice.channel)
+                if not vc.is_playing():
+                    await play_music(vc)
+                await smart_send(message, f"'{title}' 틀어따아! 🎶💿")
+            else:
+                await smart_send(message, "노래 검색 실패했쪄용ㅠㅠ 다시 말해줘용!")
+        else:
+            await smart_send(message, "먼저 음성채널 들어가쏘~🎤")
+        return
+        
     # ✅ 말해
     if "말해" in msg:
         if message.author.voice and message.author.voice.channel:
@@ -248,14 +272,14 @@ async def on_message(message):
             await smart_send(message, "멈췄어용~⏸️")
         return
 
-    if "다시 틀어" in msg:
+    if "다시" in msg:
         vc = message.guild.voice_client
         if vc and vc.is_paused():
             vc.resume()
             await smart_send(message, "다시 고고!!~▶️")
         return
 
-    if "다음 노래" in msg or "스킵" in msg:
+    if "다음" in msg or "스킵" in msg:
         vc = message.guild.voice_client
         if vc and vc.is_playing():
             vc.stop()
@@ -274,7 +298,7 @@ async def on_message(message):
         return
 
     # 이미지 생성
-    if "그려줘" in msg or "그림" in msg or "사진 만들어" in msg:
+    if "그려" in msg or "그림" in msg or "사진 만들어" in msg:
         prompt = message.content.replace("그려줘", "").replace("그림", "").replace("사진 만들어", "").strip()
         if not prompt:
             await smart_send(message, "무슨 그림 그릴까용~? 🎨")
