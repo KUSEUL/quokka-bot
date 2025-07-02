@@ -120,6 +120,7 @@ async def generate_image(prompt):
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
+intents.members = True
 bot = commands.Bot(command_prefix="", intents=intents)
 
 music_queue = []
@@ -165,6 +166,8 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send(f"{BOT_NAME}이(가) 두두둥쟝!!~ 🤖🌱")
+    else:
+        print("❌ 채널을 찾을 수 없어요!")
 
 # ✅ 메시지 받을 때 이벤트
 @bot.event
