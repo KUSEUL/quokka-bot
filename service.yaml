@@ -1,0 +1,13 @@
+services:
+  bot:
+    run: python main.py
+    type: background
+    envVars:
+      - key: DISCORD_TOKEN
+        fromDotEnv: true
+      - key: OPENAI_API_KEY
+        fromDotEnv: true
+      - key: CHANNEL_ID
+        fromDotEnv: true
+      - key: BOT_NAME
+        fromDotEnv: true
