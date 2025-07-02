@@ -179,7 +179,20 @@ async def on_message(message):
     msg = message.content.lower().strip()
     user_id = message.author.id
 
-    # ✅ 이제 on_message 안에서 정상 작동
+    # ✅ "들어와" 명령어 처리
+    if "들어와" in msg:
+        if message.author.voice and message.author.voice.channel:
+            channel = message.author.voice.channel
+            try:
+                await channel.connect()
+                await smart_send(message, "두둥쟝~ 입장해따! 🌱🎧")
+            except discord.ClientException:
+                await smart_send(message, "이미 들어와쪄용~🙃")
+        else:
+            await smart_send(message, "너가 먼저 음성룸에 들어가쏘~🎧")
+        return
+
+    # ✅ 말해
     if "말해" in msg:
         if message.author.voice and message.author.voice.channel:
             channel = message.author.voice.channel
@@ -227,27 +240,6 @@ async def on_message(message):
         else:
             await smart_send(message, "먼저 음성룸 들어가쏘~🌱")
             return
-
-    # 음악 기능
-    if "노래 틀어" in msg or "틀어" in msg:
-        query = msg.replace("노래 틀어줘", "").replace("음악 틀어줘", "").replace("노래 틀어", "").replace("음악 틀어", "").strip()
-        if not query:
-            await smart_send(message, "무슨 노래 틀까용~? 🎶")
-            return
-        if message.author.voice:
-            channel = message.author.voice.channel
-            vc = message.guild.voice_client or await channel.connect()
-            url, title = search_youtube(query)
-            if url:
-                music_queue.append((url, title))
-                await smart_send(message, f"대기열 추가했쪄용~ 🎶 {title}")
-                if not vc.is_playing():
-                    await play_music(vc)
-            else:
-                await smart_send(message, "노래 검색 실패했어용ㅠㅠ")
-        else:
-            await smart_send(message, "먼저 음성 채널에 들어가쏘~!")
-        return
 
     if "멈춰" in msg:
         vc = message.guild.voice_client
