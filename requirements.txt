@@ -1,5 +1,6 @@
-discord.py
-flask
+discord.py==2.3.2
 openai
-python-dotenv
 yt_dlp
+python-dotenv
+Flask
+PyNaCl
