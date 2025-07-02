@@ -147,6 +147,7 @@ async def play_music(vc):
         source = await discord.FFmpegOpusAudio.from_probe(url2, options='-vn')
         vc.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_music(vc), bot.loop))
 
+# ✅ 메시지 전송 함수
 async def smart_send(message, content):
     try:
         if message.guild:
@@ -156,27 +157,22 @@ async def smart_send(message, content):
     except Exception as e:
         print(f"메시지 전송 실패: {e}")
 
+# ✅ 봇이 시작될 때 실행되는 이벤트
 @bot.event
 async def on_ready():
     print(f"{bot.user.name} 로그인 완료! 🎉")
-
-    @bot.event
-async def on_ready():
-    print(f"{bot.user.name} 로그인 완료! 🎉")
-    check_ffmpeg_installed()  # << 요기 추가된 줄
+    check_ffmpeg_installed()  # ✅ FFmpeg 체크
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send(f"{BOT_NAME}이(가) 두두둥쟝!!~ 🤖🌱")
 
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel:
-        await channel.send(f"{BOT_NAME}이(가) 두두둥쟝!!~ 🤖🌱")
-
+# ✅ 메시지 받을 때 이벤트
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
     if message.author == bot.user:
         return
+
 
     msg = message.content.lower().strip()
     user_id = message.author.id
