@@ -1,6 +1,6 @@
 FROM python:3.11-slim-bullseye
 
-# 필수 패키지 설치
+# 🎯 디스코드 음성 기능 관련 필수 패키지 설치
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libopus0 \
@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && apt-get clean
 
-# 작업 디렉토리 설정
 WORKDIR /app
 
 # pip 최신화
