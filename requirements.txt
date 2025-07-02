@@ -2,6 +2,6 @@ discord.py==2.3.2
 openai
 yt_dlp
 python-dotenv
-Flask
-PyNaCl
-gTTS
+flask
+pynacl
+gtts
