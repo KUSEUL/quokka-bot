@@ -189,11 +189,14 @@ async def on_message(message):
         await smart_send(message, f"알게쏘! {name} 기억할게용~ 🐾")
         return
 
-    # 음성채널 입장
+# 음성채널 입장
     if ("들어와" in msg and message.author.voice):
         try:
             channel = message.author.voice.channel
-            if not message.guild.voice_client:
+            vc = message.guild.voice_client
+
+            # 봇이 없거나 / 연결 안 되어 있거나 / 다른 채널에 있으면 입장
+            if not vc or not vc.is_connected() or vc.channel != channel:
                 await channel.connect()
                 await smart_send(message, "쿼카 입장했따앙~🐾")
             else:
@@ -201,7 +204,7 @@ async def on_message(message):
         except Exception as e:
             print("입장 오류:", e)
             await smart_send(message, "입장 실패했쪄용ㅠㅠ")
-        return
+    return
 
     if "나가" in msg or "꺼져" in msg:
         if message.guild.voice_client:
