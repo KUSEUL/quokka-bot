@@ -161,9 +161,12 @@ async def smart_send(message, content):
 # ✅ 봇이 시작될 때 실행되는 이벤트
 @bot.event
 async def on_ready():
+    print("==== on_ready 시작됨 ====")
     print(f"{bot.user.name} 로그인 완료! 🎉")
-    check_ffmpeg_installed()  # ✅ FFmpeg 체크
+    check_ffmpeg_installed()
+    print(f"채널 ID: {CHANNEL_ID}")
     channel = bot.get_channel(CHANNEL_ID)
+    print(f"채널 객체: {channel}")
     if channel:
         await channel.send(f"{BOT_NAME}이(가) 두두둥쟝!!~ 🤖🌱")
     else:
