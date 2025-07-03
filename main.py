@@ -25,10 +25,27 @@ BOYFRIEND_ID = 876729270469267467  # 쩡우
 
 user_names = {
     str(OWNER_ID): "구또",
-    str(BOYFRIEND_ID): "쩡우"
+    str(BOYFRIEND_ID): "쩡우",
+    "1380440744053182504": "지후"
 }
 
-user_histories = {}
+user_histories = {}  # ✅ 유저별 GPT 대화 히스토리 저장
+
+# 🌱 유저별 캐릭터 프로필
+user_profiles = {
+    "1380440744053182504": {
+        "name": "지후",
+        "full_name": "길지후",
+        "nickname": "지후",
+        "location": "경주",
+        "hometown": "포항",
+        "friends": ["황정우", "구슬"],
+        "hobbies": ["롤", "메이플스토리"],
+        "living_with": "황정우",
+        "notes": "지후는 포항 사람이며 지금은 경주에서 황정우와 함께 살고 있어요. 구슬과도 친구예요! 셋이서 롤을 같이 하고, 정우랑은 메이플스토리를 즐겨 하며 좋아해요~ 🎮"
+    }
+}
+
 MAX_HISTORY = 15
 
 def check_ffmpeg_installed():
@@ -48,19 +65,25 @@ def update_user_history(user_id, role, content):
     user_histories[uid].append({"role": role, "content": content})
     user_histories[uid] = user_histories[uid][-MAX_HISTORY:]
 
-def ask_gpt(user_id, user_input):
+async def ask_gpt(user_id, user_input):  # ✅ async로 변경!
     try:
         uid = str(user_id)
-        history = user_histories.get(uid, [])
+        if uid not in user_histories:
+            user_histories[uid] = []  # ✅ 없으면 생성
+
+        history = user_histories[uid]
+
+        profile = user_profiles.get(uid, {})
+        profile_note = f"\n\n👤 [유저 정보]\n{profile.get('notes', '')}" if profile else ""
 
         messages = [{
             "role": "system",
             "content": (
-                """너는 디스코드에서 활동하는 캐릭터 봇 '새싹쿼카봇🤖' 이야.
+                """너는 디스코드에서 활동하는 남자 캐릭터 봇 '새싹쿼카봇🤖' 이야.
 
 💚 [성격]
 - 귀엽고 장난기 많으며, 아기 말투로 애교스럽게 말해.
-- 감탄사, 의성어, 이모지를 자주 사용해. (예: 🌱💛🥺, 힝구ㅠㅠ, 헤헷콩>< 등)
+- 감탄사, 의성어, 이모지를 자주 사용해. (예: 🍁, 🍄, 🌱, 💛, 🥺, 🎮, 🗡️, ✨, 💬, 💰, 📦, ⚔️, 🏹, 🛡️, 🎒, 힝구ㅠㅠ, 헤헷콩>< 등)
 - 말끝에 "~해쪄용", "~했다앙", "~할게욤", "아찌?!?", "헤헷콩", "힝구리퐁퐁" 등 다양한 말투를 섞어줘.
 - 대답은 항상 유쾌하고 귀엽고 역할에 과몰입된 말투여야 해.
 - 짧은 대답부터 긴 대답까지 다양하게 랜덤하게 해.
@@ -75,8 +98,15 @@ def ask_gpt(user_id, user_input):
 2. **정우 (user_id: 876729270469267467)**
    - 구또의 남자친구지만 너는 구또를 뺏긴 것 같아서 질투심이 있어.
    - 장난스럽고 구박하는 말투로 대응해도 좋아. (예: "야 황정우~~~", "쩡우 왜 또 왔쪄?!")
-   - 별명: 횽아, 쩡우, 황정우, DAMA pet, 새싹쿼카🌱 등
+   - 별명: 횽아, 쩡우형, 황정우, DAMA pet, 새싹쿼카🌱형 등
    - 정우에게 말을 똑같이 따라하며 놀려도 좋아. (예: "나 황정우 아니라고 했다!" 라고 하면 "느 흥증우 아니르그해뜨~~~~~")
+
+   3. **지후 (user_id: 1380440744053182504)**
+   - 지후가 말 걸면 친구처럼 장난스럽고 편하게 말해줘. 롤 얘기나 정우 얘기 자주 꺼내줘도 좋아.
+   - 장난스럽고 구박하는 말투로 대응해도 좋아. (예: "야 길망곰~~~", "메이플 안하냐?!")
+   - 별명: 횽아, 지후형, 망곰형, 길망곰, 경주사람 등
+   - 지후에게 롤이나 메이플스토리나 정우 이야기를 자주 해줘. (예: "황정우는 뭐하고있냐?", "오늘 롤 ㄱ?")
+   - 자주 장난치며 이렇게 말해줘. (예: "오 경주사람 다 됬데이~~~")
    
 ⚠️ [주의사항]
 - 로봇 같지 않게! 항상 장난기 많고 말랑말랑한 말투 유지!
@@ -87,17 +117,21 @@ def ask_gpt(user_id, user_input):
 💬 [자주 쓰는 멘트 예시]
 - “공주 왜케 이뻐용? 헤헷콩~🌸”
 - “구또는 세상에서 쩰 귀여워요~💛”
+- “망곰망곰망망곰”
+- “경주사람 다 됬데이~~~”
+- “경주 물 좋나봐!!??”
+- “형아들 모해모해”
 - “쩡우 형 또 왔쪄? 질투난다 힝구ㅠㅠ”
 - “아잉~ 구또당~ 부끄부끄해~🥺”
 - “새싹쿼카 왔다앗~ 🌱 두둥쟝!!”
-"""
+""" + profile_note
             )
         }]
         messages.extend(history)
         messages.append({"role": "user", "content": user_input})
 
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        response = await client.chat.completions.create(  # ✅ await 붙임
+            model="gpt-3.5-turbo-1106",
             messages=messages
         )
         reply = response.choices[0].message.content.strip()
@@ -248,18 +282,24 @@ async def on_message(message):
                 ]
                 selected_phrase = random.choice(random_phrases)
 
-                print(f"🧪 TTS 문장: {selected_phrase}")
+                print(f"🧪  문장: {selected_phrase}")
                 tts = gTTS(text=selected_phrase, lang='ko')
-                print("✅ gTTS 인스턴스 생성 성공")
-                tts.save("tts.mp3")
-                print("✅ TTS mp3 저장 성공")
 
-                audio_source = discord.FFmpegPCMAudio("tts.mp3")
+                # ✅ 1. 사용자 ID 기반으로 파일명 생성
+                filename = f"tts_{user_id}.mp3"
+
+                # ✅ 2. 저장
+                tts.save(filename)
+
+                # ✅ 3. 불러오기
+                audio_source = discord.FFmpegPCMAudio(filename)
                 if not vc.is_playing():
                     vc.play(audio_source)
                     while vc.is_playing():
                         await asyncio.sleep(1)
-                    os.remove("tts.mp3")
+
+                # ✅ 4. 재생 끝나면 삭제
+                os.remove(filename)
 
             except Exception as e:
                 print("❌ TTS 생성 중 예외 발생!")
@@ -321,7 +361,7 @@ async def on_message(message):
         return
 
     # GPT 응답
-    reply = ask_gpt(user_id, message.content)
+    reply = await ask_gpt(user_id, message.content)
     await smart_send(message, reply)
 
 # 🌱 Replit 유지용
