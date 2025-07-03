@@ -454,14 +454,6 @@ async def on_message(message):
             await smart_send(message, "이미지 생성 에러에러에러용ㅠㅠ")
         return
 
-    # GPT 응답
-try:
-    reply = await ask_gpt(user_id, message.content)
-    await smart_send(message, reply)
-except Exception as e:
-    print(f"응답 처리 중 에러: {e}")
-    await smart_send(message, "힝구ㅠ GPT 에러에러에러용ㅠㅠ 다시 말 걸어줘용~!")
-
 # 🌱 Replit 유지용
 keep_alive()
 
