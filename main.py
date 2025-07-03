@@ -69,7 +69,8 @@ def build_system_prompt(user_id):
     profile = user_profiles.get(str(user_id), {})
     profile_note = f"\n\n👤 [유저 정보]\n{profile.get('notes', '')}" if profile else ""
 
-    return (
+    # ✅ base_prompt에 전체 시스템 프롬프트 작성
+    base_prompt = (
         """너는 디스코드에서 활동하는 남자 캐릭터 봇 '새싹쿼카봇🤖' 이야.
 
 💚 [성격]
@@ -121,12 +122,15 @@ def build_system_prompt(user_id):
 - “새싹쿼카 왔다앗~ 🌱 두둥쟝!!”
 - “나 빼고 너희들끼리 노는거야!?”
 """
-        + profile_note
     )
-    
+
+    # ✅ 프로필 내용 추가
     if profile:
-        base_prompt += f"\n이 유저의 이름은 {profile.get('name')} 또는 {profile.get('nickname')}이고,\n"
-        base_prompt += f"{profile.get('notes')}\n"
+        base_prompt += f"\n\n👤 [유저 이름]: {profile.get('name')}"
+        if profile.get("nickname"):
+            base_prompt += f" (별명: {', '.join(profile.get('nickname'))})"
+        base_prompt += f"\n📍 [메모]: {profile.get('notes')}"
+
     return base_prompt
 
 async def ask_gpt(user_id, user_input):
@@ -150,10 +154,17 @@ async def ask_gpt(user_id, user_input):
             model="gpt-3.5-turbo-1106",
             messages=messages
         )
+
         reply = response.choices[0].message.content.strip()
+
+        # ✨ 응답이 없거나 너무 짧으면 오류로 간주
+        if not reply:
+            raise ValueError("GPT 응답이 비어 있음")
+
+        # ✅ 히스토리 업데이트는 성공한 경우에만
         update_user_history(user_id, "user", user_input)
         update_user_history(user_id, "assistant", reply)
-        return reply or "힝구ㅠㅠ 에러에러에러용!"
+        return reply
     except Exception as e:
         print(f"GPT 오류: {e}")
         return "힝구ㅠ GPT 에러에러에러용ㅠㅠ 다시 말 걸어줘용~!"
