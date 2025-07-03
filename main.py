@@ -64,7 +64,54 @@ def update_user_history(user_id, role, content):
         user_histories[uid] = []
     user_histories[uid].append({"role": role, "content": content})
     user_histories[uid] = user_histories[uid][-MAX_HISTORY:]
+    
+async def summarize_history(user_id):
+    history = user_histories.get(str(user_id), [])
+    if len(history) < 8:
+        return  # 충분히 길지 않으면 요약 안 함
 
+    summary_prompt = [
+        {"role": "system", "content": "다음은 유저와 챗봇의 대화 기록이야. 이 대화를 한 줄로 요약해줘. 분위기, 감정, 핵심 사건만 포함해줘."}
+    ] + history
+
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
+            messages=summary_prompt
+        )
+        summary = response.choices[0].message.content.strip()
+        print(f"✅ 요약 생성됨: {summary}")
+
+        # 기존 히스토리를 요약으로 대체
+        user_histories[str(user_id)] = [
+            {"role": "system", "content": f"👑 [대화 요약]: {summary}"}
+        ]
+    except Exception as e:
+        print(f"요약 실패: {e}")
+
+# ✅ 요기 들여쓰기 바로잡은 smart_trim_history 함수!
+def smart_trim_history(user_id, max_history=30):
+    uid = str(user_id)
+    history = user_histories.get(uid, [])
+
+    if len(history) <= max_history:
+        return  # 아직 자를 필요 없음
+
+    # 🎯 중요 키워드 우선 보존
+    important_keywords = ["사랑", "싫어", "화났", "고백", "울었", "졸려", "질투", "헤어졌", "싸웠"]
+
+    def is_important(entry):
+        content = entry.get("content", "")
+        return any(keyword in content for keyword in important_keywords)
+
+    # 1. 중요한 메시지만 먼저 따로 뽑고
+    important = [h for h in history if is_important(h)]
+    others = [h for h in history if not is_important(h)]
+
+    # 2. 합쳐서 max만큼 자르기
+    trimmed = (important + others)[-max_history:]
+    user_histories[uid] = trimmed
+        
 def build_system_prompt(user_id):
     profile = user_profiles.get(str(user_id), {})
     profile_note = f"\n\n👤 [유저 정보]\n{profile.get('notes', '')}" if profile else ""
@@ -137,36 +184,44 @@ async def ask_gpt(user_id, user_input):
     try:
         uid = str(user_id)
         if uid not in user_histories:
-            user_histories[uid] = []  # ✅ 없으면 초기화만
+            user_histories[uid] = []  # ✅ 없으면 초기화
 
-        history = user_histories[uid]  # ✅ 기존 히스토리 유지
+        history = user_histories[uid]  # ✅ 기존 히스토리 불러오기
 
+        # 히스토리 길이 제한 처리
+        if len(history) > 40:
+            await summarize_history(user_id)
+        elif len(history) > 30:
+            smart_trim_history(user_id)
+
+        # 🔥 system prompt + 기존 히스토리 + 현재 입력 결합
         system_prompt = build_system_prompt(user_id)
+        messages = [{"role": "system", "content": system_prompt}] + history + [
+            {"role": "user", "content": user_input}
+        ]
 
-        messages = [{
-            "role": "system",
-            "content": system_prompt
-        }]
-        messages.extend(history)
-        messages.append({"role": "user", "content": user_input})
+        print(f"[GPT 메시지]\n{messages}")  # ← 디버깅용
 
         response = await client.chat.completions.create(
             model="gpt-3.5-turbo-1106",
-            messages=messages
+            messages=messages,
+            temperature=0.9
         )
 
         reply = response.choices[0].message.content.strip()
 
-        # ✨ 응답이 없거나 너무 짧으면 오류로 간주
+        # 응답 비어있으면 오류
         if not reply:
             raise ValueError("GPT 응답이 비어 있음")
 
-        # ✅ 히스토리 업데이트는 성공한 경우에만
-        update_user_history(user_id, "user", user_input)
-        update_user_history(user_id, "assistant", reply)
+        # ✅ 히스토리 업데이트는 정상 응답일 때만
+        update_user_history(uid, "user", user_input)
+        update_user_history(uid, "assistant", reply)
+
         return reply
+
     except Exception as e:
-        print(f"GPT 오류: {e}")
+        print(f"[ask_gpt 오류]: {e}")
         return "힝구ㅠ GPT 에러에러에러용ㅠㅠ 다시 말 걸어줘용~!"
         
 async def generate_image(prompt):
@@ -400,8 +455,12 @@ async def on_message(message):
         return
 
     # GPT 응답
+try:
     reply = await ask_gpt(user_id, message.content)
     await smart_send(message, reply)
+except Exception as e:
+    print(f"응답 처리 중 에러: {e}")
+    await smart_send(message, "힝구ㅠ GPT 에러에러에러용ㅠㅠ 다시 말 걸어줘용~!")
 
 # 🌱 Replit 유지용
 keep_alive()
