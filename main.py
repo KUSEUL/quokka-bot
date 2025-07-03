@@ -46,7 +46,7 @@ user_profiles = {
     }
 }
 
-MAX_HISTORY = 15
+MAX_HISTORY = 30
 
 def check_ffmpeg_installed():
     try:
