@@ -23,6 +23,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID") or "0")
 BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
 
+if CHANNEL_ID == 0:
+    print("❌ CHANNEL_ID가 설정되지 않았습니다!")
+    
 # 🌱 OpenAI 클라이언트
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -39,6 +42,7 @@ user_names = {
 user_histories = {}  # ✅ 유저별 GPT 대화 히스토리 저장
 
 # 🌱 유저별 캐릭터 프로필
+user_profiles = {}  # 이 줄 추가!
 user_profiles["569618172462759962"] = {
     "name": "구슬",
     "full_name": "구슬",
@@ -249,8 +253,8 @@ async def ask_gpt(user_id, user_input):
         
 async def generate_image(prompt):
     try:
-        response = client.images.generate(
-            model="dall-e-3",
+    response = await client.images.generate(
+        model="dall-e-3",
             prompt=prompt,
             size="1024x1024",
             n=1
@@ -273,7 +277,13 @@ def search_youtube(query):
     options = {'format': 'bestaudio', 'noplaylist': 'True', 'quiet': True}
     with YoutubeDL(options) as ydl:
         try:
-            info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+            results = ydl.extract_info(f"ytsearch:{query}", download=False)
+            info_list = results.get('entries', [])
+            if not info_list:
+                print("❌ 유튜브 검색 결과 없음!")
+                return None, None
+
+            info = info_list[0]
             return info['url'], info['title']
         except Exception as e:
             print(f"검색 실패: {e}")
@@ -324,7 +334,7 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    msg = message.content.lower().strip()
+    msg = (message.content or "").lower().strip()
     user_id = message.author.id
 
     # ✅ "들어" 명령어 처리
@@ -410,7 +420,8 @@ async def on_message(message):
 
                 # ✅ 3. 불러오기
                 audio_source = discord.FFmpegPCMAudio(filename)
-                if not vc.is_playing():
+                if vc.is_playing():
+                    vc.stop()
                     vc.play(audio_source)
                     while vc.is_playing():
                         await asyncio.sleep(1)
