@@ -6,7 +6,7 @@ import random
 import subprocess
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-from openai import OpenAI
+from openai import AsyncOpenAI
 from yt_dlp import YoutubeDL
 from gtts import gTTS  # ✅ 미리 import
 
@@ -15,19 +15,32 @@ try:
     print("✅ PyNaCl import 성공 (실행환경에 설치됨)")
 except Exception as e:
     print(f"❌ PyNaCl import 실패: {e}")
+
+# 🌱 tts 폴더 없으면 자동 생성
+if not os.path.exists("tts"):
+    os.makedirs("tts")
     
 # 🌱 환경변수 로드
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-CHANNEL_ID = int(os.getenv("CHANNEL_ID") or "0")
-BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
+
+# 🌱 CHANNEL_ID 정수 변환 + 예외 처리
+try:
+    CHANNEL_ID = int(os.getenv("CHANNEL_ID") or "0")
+except ValueError:
+    print("❌ CHANNEL_ID가 정수가 아니에요! 환경변수를 확인해주세요.")
+    CHANNEL_ID = 0
 
 if CHANNEL_ID == 0:
-    print("❌ CHANNEL_ID가 설정되지 않았습니다!")
+    print("❌ 채널 ID가 설정되지 않아 종료합니다.")
+    exit()
     
+# 🌱 기타 설정
+BOT_NAME = os.getenv("BOT_NAME", "새싹쿼카봇🤖")
+
 # 🌱 OpenAI 클라이언트
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 OWNER_ID = 569618172462759962  # 구또
 BOYFRIEND_ID = 876729270469267467  # 쩡우
@@ -85,6 +98,13 @@ def check_ffmpeg_installed():
     except FileNotFoundError:
         print("❌ FFmpeg 설치 안됨 (파일 없음)")
 
+# ✅ 여기에 safe_play 함수 추가!
+async def safe_play(vc, source):
+    if vc.is_playing():
+        vc.stop()
+        await asyncio.sleep(0.5)  # 정리 시간 잠깐 줌
+    vc.play(source)
+    
 def update_user_history(user_id, role, content):
     uid = str(user_id)
     if uid not in user_histories:
@@ -253,8 +273,8 @@ async def ask_gpt(user_id, user_input):
         
 async def generate_image(prompt):
     try:
-    response = await client.images.generate(
-        model="dall-e-3",
+        response = await client.images.generate(
+            model="dall-e-3",
             prompt=prompt,
             size="1024x1024",
             n=1
@@ -295,12 +315,22 @@ async def play_music(vc):
         if vc:
             await vc.disconnect()
         return
+
     url, title = music_queue.pop(0)
     with YoutubeDL({'format': 'bestaudio', 'quiet': True}) as ydl:
         info = ydl.extract_info(url, download=False)
         url2 = info['url']
         source = await discord.FFmpegOpusAudio.from_probe(url2, options='-vn')
-        vc.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_music(vc), bot.loop))
+
+        # ✅ safe_play로 안정 재생
+        await safe_play(vc, source)
+
+        # ✅ 재생이 끝날 때까지 대기
+        while vc.is_playing():
+            await asyncio.sleep(1)
+
+        # ✅ 다음 곡으로 자동 재생
+        await play_music(vc)
 
 async def smart_send(message, content):
     try:
@@ -385,49 +415,63 @@ async def on_message(message):
                 elif vc.channel != channel:
                     await vc.move_to(channel)
 
-                random_phrases = [
-                    "구 또또또또또또또또똗",
-                    "질투나쟈나 힝구리퐁퐁",
-                    "망곰 망곰 길망곰",
-                    "오 경주사람",
-                    "경주 사람 다 됬데이",
-                    "너가 요리를 좀 한다며",
-                    "쩡우 형아 또 왜 왔어",
-                    "형 지금 질투하는거야 나 봇이야 왜이래",
-                    "곤쥬 근데 오늘 왜케 이뻐용 진짜",
-                    "새싹쿼카 두두둥장 헤헷콩",
-                    "이삐야 밥 먹었쩌용 맘마빱빠 냠냠",
-                    "새싹 쿼카를 물리쳐랏",
-                    "길망곰 나와 힘을 합쳐 새싹 쿼카를 물리치자",
-                    "새싹 쿼카를 처단하랏",
-                    "캐리캐리 캐리용",
-                    "누구쎄용 누구쎄용 누구쎄용",
-                    "에베베벱 베베베벱 베베베벱 베베벱벱",
-                    "걔 정수리 새싹 난 옆동네 쿼카 아니냐",
-                    "메이플스토 리 메이플스토 리 메메메 메이플 메이플 메이플",
-                    "느  흥증우  으느르르  했두아아아아아아"
-                ]
-                selected_phrase = random.choice(random_phrases)
+                random_phrases_by_user = {
+                    "569618172462759962": [  # 구또 (너)
+                        "곤쥬 근데 오늘 왜케 이뻐용 진짜",
+                        "구 또또또또또또또또똗",
+                        "이삐야 밥 먹었쩌용 맘마빱빠 냠냠",
+                        "새싹 쿼카를 물리쳐랏",
+                        "길망곰 나와 힘을 합쳐 새싹 쿼카를 물리치자",
+                        "새싹 쿼카를 처단하랏",
+                        "캐리캐리 캐리용",
+                        "누구쎄용 누구쎄용 누구쎄용",
+                        "에베베벱 베베베벱 베베베벱 베베벱벱",
+                        "메이플스토 리 메이플스토 리 메메메 메이플 메이플 메이플",
+                        "느  흥증우  으느르르  했두아아아아아아",
+                    ],
+                    "876729270469267467": [  # 쩡우
+                        "쩡우 형아 또 왜 왔어",
+                        "형 지금 질투하는거야 나 봇이야 왜이래",
+                        "질투나쟈나 힝구리퐁퐁",
+                        "너가 요리를 좀 한다며",
+                        "오 경주사람",
+                        "경주 사람 다 됬데이",
+                        "망곰 망곰 길망곰",
+                        "걔 정수리 새싹 난 옆동네 쿼카 아니냐",
+                    ],
+                    "default": [
+                        "새싹쿼카 두두둥장 헤헷콩",
+                        "말 걸어줘서 고마워용~",
+                        "누구야 누구야 누구쎄용?",
+                        "나 귀엽지롱~ 😚"
+                    ]
+                }
+                user_id = str(message.author.id)
+                phrases = random_phrases_by_user.get(user_id, random_phrases_by_user["default"])
+                phrase = random.choice(phrases)
 
-                print(f"🧪  문장: {selected_phrase}")
-                tts = gTTS(text=selected_phrase, lang='ko')
+                print(f"🧪  문장: {phrase}")
+                tts = gTTS(text=phrase, lang='ko')
 
                 # ✅ 1. 사용자 ID 기반으로 파일명 생성
-                filename = f"tts_{user_id}.mp3"
+                filename = f"tts/tts_{user_id}.mp3"
 
                 # ✅ 2. 저장
                 tts.save(filename)
 
                 # ✅ 3. 불러오기
                 audio_source = discord.FFmpegPCMAudio(filename)
-                if vc.is_playing():
-                    vc.stop()
-                    vc.play(audio_source)
-                    while vc.is_playing():
-                        await asyncio.sleep(1)
+                await safe_play(vc, audio_source)
+
+                while vc.is_playing():
+                    await asyncio.sleep(1)
 
                 # ✅ 4. 재생 끝나면 삭제
-                os.remove(filename)
+                try:
+                    if os.path.exists(filename):
+                        os.remove(filename)
+                except Exception as e:
+                    print(f"파일 삭제 실패: {e}")
 
             except Exception as e:
                 print("❌ TTS 생성 중 예외 발생!")
