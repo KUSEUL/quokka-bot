@@ -10,6 +10,12 @@ from openai import OpenAI
 from yt_dlp import YoutubeDL
 from gtts import gTTS  # ✅ 미리 import
 
+try:
+    import nacl
+    print("✅ PyNaCl import 성공 (실행환경에 설치됨)")
+except Exception as e:
+    print(f"❌ PyNaCl import 실패: {e}")
+    
 # 🌱 환경변수 로드
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
